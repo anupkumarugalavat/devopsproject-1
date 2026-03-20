@@ -101,56 +101,56 @@ resource "aws_instance" "my_ec2_instance2" {
     }
 
     inline = [
-    "set -euxo pipefail",
+      "set -euxo pipefail",
 
-    # Wait for cloud-init to finish
-    "cloud-init status --wait",
+      # Wait for cloud-init to finish
+      "cloud-init status --wait",
 
-    # Install Docker
-    "sudo yum update -y",
-    "sudo yum install docker -y",
-    "sudo systemctl start docker",
-    "sudo systemctl enable docker",
-    "sudo chmod 777 /var/run/docker.sock",
+      # Install Docker
+      "sudo yum update -y",
+      "sudo yum install docker -y",
+      "sudo systemctl start docker",
+      "sudo systemctl enable docker",
+      "sudo chmod 777 /var/run/docker.sock",
 
-    # Disable SELinux
-    "sudo setenforce 0",
-    "sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config",
+      # Disable SELinux
+      "sudo setenforce 0",
+      "sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config",
 
-    # Add Kubernetes repository
-    "echo '[kubernetes]' | sudo tee /etc/yum.repos.d/kubernetes.repo",
-    "echo 'name=Kubernetes' | sudo tee -a /etc/yum.repos.d/kubernetes.repo",
-    "echo 'baseurl=https://pkgs.k8s.io/core:/stable:/v1.29/rpm/' | sudo tee -a /etc/yum.repos.d/kubernetes.repo",
-    "echo 'enabled=1' | sudo tee -a /etc/yum.repos.d/kubernetes.repo",
-    "echo 'gpgcheck=1' | sudo tee -a /etc/yum.repos.d/kubernetes.repo",
-    "echo 'gpgkey=https://pkgs.k8s.io/core:/stable:/v1.29/rpm/repodata/repomd.xml.key' | sudo tee -a /etc/yum.repos.d/kubernetes.repo",
-    "echo 'exclude=kubelet kubeadm kubectl cri-tools kubernetes-cni' | sudo tee -a /etc/yum.repos.d/kubernetes.repo",
+      # Add Kubernetes repository
+      "echo '[kubernetes]' | sudo tee /etc/yum.repos.d/kubernetes.repo",
+      "echo 'name=Kubernetes' | sudo tee -a /etc/yum.repos.d/kubernetes.repo",
+      "echo 'baseurl=https://pkgs.k8s.io/core:/stable:/v1.29/rpm/' | sudo tee -a /etc/yum.repos.d/kubernetes.repo",
+      "echo 'enabled=1' | sudo tee -a /etc/yum.repos.d/kubernetes.repo",
+      "echo 'gpgcheck=1' | sudo tee -a /etc/yum.repos.d/kubernetes.repo",
+      "echo 'gpgkey=https://pkgs.k8s.io/core:/stable:/v1.29/rpm/repodata/repomd.xml.key' | sudo tee -a /etc/yum.repos.d/kubernetes.repo",
+      "echo 'exclude=kubelet kubeadm kubectl cri-tools kubernetes-cni' | sudo tee -a /etc/yum.repos.d/kubernetes.repo",
 
-    # Install Kubernetes packages
-    "sudo yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes",
-    "sudo systemctl enable --now kubelet",
+      # Install Kubernetes packages
+      "sudo yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes",
+      "sudo systemctl enable --now kubelet",
 
-    # Initialize Kubernetes
-    "sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --ignore-preflight-errors=NumCPU --ignore-preflight-errors=Mem",
+      # Initialize Kubernetes
+      "sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --ignore-preflight-errors=NumCPU --ignore-preflight-errors=Mem",
 
-    # Configure kubectl for ec2-user
-    "mkdir -p /home/ec2-user/.kube",
-    "sudo cp /etc/kubernetes/admin.conf /home/ec2-user/.kube/config",
-    "sudo chown ec2-user:ec2-user /home/ec2-user/.kube/config",
+      # Configure kubectl for ec2-user
+      "mkdir -p /home/ec2-user/.kube",
+      "sudo cp /etc/kubernetes/admin.conf /home/ec2-user/.kube/config",
+      "sudo chown ec2-user:ec2-user /home/ec2-user/.kube/config",
 
-    # Wait until kube-apiserver is ready (retry)
-    "for i in {1..60}; do kubectl get nodes && break || echo 'Waiting for kube-apiserver...' && sleep 5; done",
+      # Wait until kube-apiserver is ready (retry)
+      "for i in {1..60}; do kubectl get nodes && break || echo 'Waiting for kube-apiserver...' && sleep 5; done",
 
-    # Apply Calico CNI with retries
-    "for i in {1..10}; do kubectl apply -f https://docs.projectcalico.org/v3.18/manifests/calico.yaml && break || echo 'Retrying Calico apply...' && sleep 5; done",
+      # Apply Calico CNI with retries
+      "for i in {1..10}; do kubectl apply -f https://docs.projectcalico.org/v3.18/manifests/calico.yaml && break || echo 'Retrying Calico apply...' && sleep 5; done",
 
-    # Apply Tigera operator with retries
-    "for i in {1..10}; do kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.0/manifests/tigera-operator.yaml && break || echo 'Retrying Tigera operator...' && sleep 5; done",
+      # Apply Tigera operator with retries
+      "for i in {1..10}; do kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.0/manifests/tigera-operator.yaml && break || echo 'Retrying Tigera operator...' && sleep 5; done",
 
-    # Remove master taint to allow scheduling pods (ignore error if already removed)
-    "kubectl taint nodes --all node-role.kubernetes.io/control-plane- || true"
-  ]
-}
+      # Remove master taint to allow scheduling pods (ignore error if already removed)
+      "kubectl taint nodes --all node-role.kubernetes.io/control-plane- || true"
+    ]
+  }
 
 }
 

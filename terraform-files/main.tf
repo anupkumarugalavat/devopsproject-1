@@ -52,14 +52,14 @@ resource "aws_security_group" "my_security_group1" {
 #      ii. Copy it in the same directory as your terraform code
 resource "aws_instance" "my_ec2_instance1" {
   ami                    = "ami-02dfbd4ff395f2a1b"
-  instance_type          = "t2.micro"
+  instance_type          = "t3a.medium"
   vpc_security_group_ids = [aws_security_group.my_security_group1.id]
   key_name               = "DevopsProject1-key" # paste your key-name here, do not use extension '.pem'
 
   # Consider EBS volume 30GB
   root_block_device {
     volume_size = 30    # Volume size 30 GB
-    volume_type = "gp2" # General Purpose SSD
+    volume_type = "gp3" # General Purpose SSD
   }
 
   tags = {
