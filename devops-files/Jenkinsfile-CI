@@ -1,0 +1,109 @@
+pipeline {
+    agent any
+    environment {
+        DOCKER_USERNAME = "anupugalavat"
+    }
+
+    stages {
+        stage("1. Cleanup") {
+            steps {
+                deleteDir()             
+            }
+        }
+
+        stage('2. Git Checkout') {
+            steps {
+                dir("DevopsProject1") {
+                    script {
+                        git branch: 'main', url: 'https://github.com/pandacloud1/DevopsProject1.git'
+                    }
+                }
+            }
+        }
+
+        stage("3. Maven Unit Test") {  
+            steps{
+                dir("DevopsProject1") {
+                    sh 'mvn test'        
+                }
+            }
+        }
+
+        stage('4. Maven Build & Integration Test') {
+            steps{
+                dir("DevopsProject1") {
+                    sh 'mvn clean verify'
+                }
+            }
+        }
+
+        // NEW STAGE: Pull replacement base image for Dockerfile
+        stage('5. Prepare Base Image') {
+            steps {
+                script {
+                    sh '''
+                        echo "Pulling Amazon Corretto 8 as replacement for openjdk:8"
+                        docker pull amazoncorretto:8
+                        docker tag amazoncorretto:8 openjdk:8
+                    '''
+                }
+            }
+        }
+
+        stage('6. Docker Image Build') {
+            steps {
+                dir('DevopsProject1') {
+                    script {
+                        def JOB = env.JOB_NAME.toLowerCase()
+                        sh "docker build -t ${JOB}:${BUILD_NUMBER} ."
+                    }
+                }
+            }
+        }
+
+        stage('7. Docker Image Tag') {
+            steps {
+                dir('DevopsProject1') {
+                    script {
+                        def JOB = env.JOB_NAME.toLowerCase()
+                        sh "docker tag ${JOB}:${BUILD_NUMBER} ${DOCKER_USERNAME}/${JOB}:v${BUILD_NUMBER}"
+                        sh "docker tag ${JOB}:${BUILD_NUMBER} ${DOCKER_USERNAME}/${JOB}:latest"
+                    }
+                }
+            } 
+        }
+
+        stage('8. Trivy Image Scan') {
+            steps {
+                script { 
+                    def JOB = env.JOB_NAME.toLowerCase()
+                    sh "trivy image ${DOCKER_USERNAME}/${JOB}:v${BUILD_NUMBER} > scan.txt"
+                }
+            }
+        }
+
+        stage('9. Docker Image Push') {
+            steps {
+                script { 
+                    withCredentials([usernamePassword(credentialsId: 'my_dockerhub_creds', usernameVariable: 'docker_user', passwordVariable: 'docker_pass')]) {
+                        sh "echo '${docker_pass}' | docker login -u '${docker_user}' --password-stdin"
+                        def JOB = env.JOB_NAME.toLowerCase()
+                        sh "docker push ${DOCKER_USERNAME}/${JOB}:v${BUILD_NUMBER}"
+                        sh "docker push ${DOCKER_USERNAME}/${JOB}:latest"
+                    }
+                }
+            }
+        }
+
+        // Optional cleanup stage
+        /*
+        stage('10. Docker Image Cleanup') {
+            steps{
+                script { 
+                    sh "docker image prune -af"
+                }
+            }
+        }
+        */
+    }
+}
