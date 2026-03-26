@@ -54,7 +54,7 @@ resource "aws_instance" "my_ec2_instance1" {
   ami                    = "ami-02dfbd4ff395f2a1b"
   instance_type          = "t3a.medium"
   vpc_security_group_ids = [aws_security_group.my_security_group1.id]
-  key_name               = "DevopsProject1-key" # paste your key-name here, do not use extension '.pem'
+  key_name               = "key-name" # paste your key-name here, do not use extension '.pem'
 
   # Consider EBS volume 30GB
   root_block_device {
@@ -80,7 +80,7 @@ resource "aws_instance" "my_ec2_instance1" {
     # ESTABLISHING SSH CONNECTION WITH EC2
     connection {
       type        = "ssh"
-      private_key = file("./DevopsProject1-key.pem") # replace with your key-name 
+      private_key = file("./key-name.pem") # replace with your key-name 
       user        = "ec2-user"
       host        = self.public_ip
     }
